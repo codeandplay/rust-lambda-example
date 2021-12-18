@@ -1,44 +1,33 @@
 #[macro_use]
-extern crate lambda_runtime as lambda;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate log;
 use simple_logger::SimpleLogger;
 
-use lambda::error::HandlerError;
+use lambda_http::{handler, lambda_runtime, Context, IntoResponse, Request, RequestExt};
+use serde_json::json;
 
-use std::error::Error;
+type Error = Box<dyn std::error::Error + Sync + Send + 'static>;
 
-#[derive(Deserialize, Clone)]
-struct CustomEvent {
-    #[serde(rename = "firstName")]
-    first_name: String,
-}
-
-#[derive(Serialize, Clone)]
-struct CustomOutput {
-    message: String,
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Error> {
     SimpleLogger::new()
         .env()
         .with_utc_timestamps()
         .init()
         .unwrap();
-    lambda!(my_handler);
-
+    lambda_runtime::run(handler(hello)).await?;
     Ok(())
 }
 
-fn my_handler(e: CustomEvent, c: lambda::Context) -> Result<CustomOutput, HandlerError> {
-    warn!("first name is {}", e.first_name);
-    if e.first_name == "" {
-        return Err(c.new_error("Empty first name"));
-    }
-
-    Ok(CustomOutput {
-        message: format!("Hello, {}!", e.first_name),
-    })
+async fn hello(req: Request, _: Context) -> Result<impl IntoResponse, Error> {
+    // `serde_json::Values` impl `IntoResponse` by default
+    // creating an application/json response
+    Ok(json!({
+        "message":
+            format!(
+                "hello {}",
+                req.query_string_parameters()
+                    .get("name")
+                    .unwrap_or_else(|| "stranger")
+            )
+    }))
 }
