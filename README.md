@@ -21,3 +21,8 @@ brew install filosottile/musl-cross/musl-cross
 ```
 ./build.sh
 ```
+
+## Lambda function logging level
+
+Logging for this project is using [simple_logger](https://docs.rs/simple_logger/1.16.0/simple_logger/)
+When the lambda function is running within AWS, The logging level can be changed by setting the environment variable for **RUST_LOG**, e.g **RUST_LOG=info**
